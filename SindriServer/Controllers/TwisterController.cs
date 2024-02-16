@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SindriServer.Controllers
 {
@@ -33,15 +35,55 @@ namespace SindriServer.Controllers
 
                 string data = $"proof_input=secret= \"{publicInput.Secret}\"\noldAmount= \"{publicInput.OldAmount}\"\nwitnesses= [{string.Join(",", publicInput.Witnesses)}]\nleafIndex= \"{publicInput.LeafIndex}\"\nleaf= \"{publicInput.Leaf}\"\nmerkleRoot= \"{publicInput.MerkleRoot}\"\nnullifier= \"{publicInput.Nullifier}\"\namount= \"{publicInput.Amount}\"\nreceiver= \"{publicInput.Receiver}\"\nrelayer= \"{publicInput.Relayer}\"\ndeposit= \"{publicInput.Deposit}\"";
 
-                request.Content = new StringContent(data);
-                request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+     
+                var collection = new List<KeyValuePair<string, string>>();
+                collection.Add(new("perform_verify", "true"));
+                collection.Add(new("proof_input", $"secret= \"{publicInput.Secret}\"\noldAmount= \"{publicInput.OldAmount}\"\nwitnesses= [{string.Join(", ", publicInput.Witnesses)}]\nleafIndex= \"{publicInput.LeafIndex}\"\nleaf= \"{publicInput.Leaf}\"\nmerkleRoot= \"{publicInput.MerkleRoot}\"\nnullifier= \"{publicInput.Nullifier}\"\namount= \"{publicInput.Amount}\"\nreceiver= \"{publicInput.Receiver}\"\nrelayer= \"{publicInput.Relayer}\"\ndeposit= \"{publicInput.Deposit}\""));
+                request.Content = new FormUrlEncodedContent(collection);
 
                 HttpResponseMessage response = await client.SendAsync(request);
                 response.EnsureSuccessStatusCode();
                 string responseBody = await response.Content.ReadAsStringAsync();
+                ProofResultDto proofGeneration = JsonSerializer.Deserialize<ProofResultDto>(responseBody);
 
+                string proofId = proofGeneration.ProofId;
                 _logger.LogInformation("Generation successfull");
-                return responseBody;
+
+                if (proofGeneration.Proof?.ProofResult != null)
+                {
+                    return proofGeneration.Proof?.ProofResult;
+                }
+
+                int restart = 0;
+                do
+                {
+                    try
+                    {
+                        var clientProof = new HttpClient();
+                        var requestProof = new HttpRequestMessage(HttpMethod.Get, $"https://sindri.app/api/v1/proof/{proofId}/detail");
+                        requestProof.Headers.Add("Accept", "application/json");
+                        requestProof.Headers.Add("Authorization", "Bearer sindri-Y1qkOKoN734PWkUCxwrJ2a1WhnZtIwLG-Stsk");
+                        var responseProof = await client.SendAsync(requestProof);
+                        responseProof.EnsureSuccessStatusCode();
+                        string responseBodyProof = await response.Content.ReadAsStringAsync();
+                        ProofResultDto proofGenerationProof = JsonSerializer.Deserialize<ProofResultDto>(responseBodyProof);
+                        if (proofGenerationProof.Proof?.ProofResult != null)
+                        {
+                            return proofGenerationProof.Proof?.ProofResult;
+                        }
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    finally { restart++; }
+                    await Task.Delay(2000);
+
+                } while (!(restart > 4));
+
+                _logger.LogInformation("Get result successfull");
+
+                return proofGeneration.Proof?.ProofResult;
             }
             catch (Exception ex)
             {
