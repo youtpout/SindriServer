@@ -1,0 +1,6 @@
+@SindriServer_HostAddress = http://localhost:5147
+
+GET {{SindriServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
