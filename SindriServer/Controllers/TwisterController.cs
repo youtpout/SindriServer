@@ -86,12 +86,19 @@ namespace SindriServer.Controllers
 
         }
 
+
+        [HttpGet]
+        public async Task<string> Get(string proofId)
+        {
+            return await GetProof(proofId);
+        }
+
         private async Task<string> GetProof(string proofId)
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Get, $"https://sindri.app/api/v1/proof/{proofId}/detail?time={DateTime.Now.Ticks}");
             request.Headers.Add("Accept", "application/json");
-            request.Headers.Add("Authorization", "Bearer sindri-Y1qkOKoN734PWkUCxwrJ2a1WhnZtIwLG-Stsk");
+            request.Headers.Add("Authorization", $"Bearer {_configuration["ApiKey"]}");
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             string result = await response.Content.ReadAsStringAsync();
