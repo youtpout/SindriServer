@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -22,7 +23,7 @@ namespace SindriServer.Controllers
         }
 
         [HttpPost]
-        public async Task<string> GetProof([FromBody] PublicInputDto publicInput)
+        public async Task<string> PostProof([FromBody] PublicInputDto publicInput)
         {
             try
             {
@@ -35,11 +36,8 @@ namespace SindriServer.Controllers
 
                 string data = $"proof_input=secret= \"{publicInput.Secret}\"\noldAmount= \"{publicInput.OldAmount}\"\nwitnesses= [{string.Join(",", publicInput.Witnesses)}]\nleafIndex= \"{publicInput.LeafIndex}\"\nleaf= \"{publicInput.Leaf}\"\nmerkleRoot= \"{publicInput.MerkleRoot}\"\nnullifier= \"{publicInput.Nullifier}\"\namount= \"{publicInput.Amount}\"\nreceiver= \"{publicInput.Receiver}\"\nrelayer= \"{publicInput.Relayer}\"\ndeposit= \"{publicInput.Deposit}\"";
 
-     
-                var collection = new List<KeyValuePair<string, string>>();
-                collection.Add(new("perform_verify", "true"));
-                collection.Add(new("proof_input", $"secret= \"{publicInput.Secret}\"\noldAmount= \"{publicInput.OldAmount}\"\nwitnesses= [{string.Join(", ", publicInput.Witnesses)}]\nleafIndex= \"{publicInput.LeafIndex}\"\nleaf= \"{publicInput.Leaf}\"\nmerkleRoot= \"{publicInput.MerkleRoot}\"\nnullifier= \"{publicInput.Nullifier}\"\namount= \"{publicInput.Amount}\"\nreceiver= \"{publicInput.Receiver}\"\nrelayer= \"{publicInput.Relayer}\"\ndeposit= \"{publicInput.Deposit}\""));
-                request.Content = new FormUrlEncodedContent(collection);
+                request.Content = new StringContent(data);
+                request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
                 HttpResponseMessage response = await client.SendAsync(request);
                 response.EnsureSuccessStatusCode();
@@ -59,13 +57,7 @@ namespace SindriServer.Controllers
                 {
                     try
                     {
-                        var clientProof = new HttpClient();
-                        var requestProof = new HttpRequestMessage(HttpMethod.Get, $"https://sindri.app/api/v1/proof/{proofId}/detail");
-                        requestProof.Headers.Add("Accept", "application/json");
-                        requestProof.Headers.Add("Authorization", "Bearer sindri-Y1qkOKoN734PWkUCxwrJ2a1WhnZtIwLG-Stsk");
-                        var responseProof = await client.SendAsync(requestProof);
-                        responseProof.EnsureSuccessStatusCode();
-                        string responseBodyProof = await response.Content.ReadAsStringAsync();
+                        string responseBodyProof = await GetProof(proofId);
                         ProofResultDto proofGenerationProof = JsonSerializer.Deserialize<ProofResultDto>(responseBodyProof);
                         if (proofGenerationProof.Proof?.ProofResult != null)
                         {
@@ -79,7 +71,7 @@ namespace SindriServer.Controllers
                     finally { restart++; }
                     await Task.Delay(2000);
 
-                } while (!(restart > 4));
+                } while (!(restart > 10));
 
                 _logger.LogInformation("Get result successfull");
 
@@ -92,6 +84,18 @@ namespace SindriServer.Controllers
             }
 
 
+        }
+
+        private async Task<string> GetProof(string proofId)
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Get, $"https://sindri.app/api/v1/proof/{proofId}/detail?time={DateTime.Now.Ticks}");
+            request.Headers.Add("Accept", "application/json");
+            request.Headers.Add("Authorization", "Bearer sindri-Y1qkOKoN734PWkUCxwrJ2a1WhnZtIwLG-Stsk");
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            string result = await response.Content.ReadAsStringAsync();
+            return result;
         }
     }
 }
