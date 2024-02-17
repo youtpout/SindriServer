@@ -23,7 +23,7 @@ namespace SindriServer.Controllers
         }
 
         [HttpPost]
-        public async Task<string> PostProof([FromBody] PublicInputDto publicInput)
+        public async Task<IActionResult> PostProof([FromBody] PublicInputDto publicInput)
         {
             try
             {
@@ -49,7 +49,7 @@ namespace SindriServer.Controllers
 
                 if (proofGeneration.Proof?.ProofResult != null)
                 {
-                    return proofGeneration.Proof?.ProofResult;
+                    return Ok(proofGeneration.Proof);
                 }
 
                 int restart = 0;
@@ -61,7 +61,7 @@ namespace SindriServer.Controllers
                         ProofResultDto proofGenerationProof = JsonSerializer.Deserialize<ProofResultDto>(responseBodyProof);
                         if (proofGenerationProof.Proof?.ProofResult != null)
                         {
-                            return proofGenerationProof.Proof?.ProofResult;
+                            return Ok(proofGenerationProof.Proof);
                         }
                     }
                     catch (Exception)
@@ -75,7 +75,7 @@ namespace SindriServer.Controllers
 
                 _logger.LogInformation("Get result successfull");
 
-                return proofGeneration.Proof?.ProofResult;
+                return StatusCode(408, "Proof generation take more time than expected, try generate proof on web browser.";
             }
             catch (Exception ex)
             {
