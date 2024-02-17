@@ -34,7 +34,7 @@ namespace SindriServer.Controllers
                 request.Headers.Add("Accept", "application/json");
                 request.Headers.Add("Authorization", $"Bearer {_configuration["ApiKey"]}");
 
-                string data = $"proof_input=secret= \"{publicInput.Secret}\"\noldAmount= \"{publicInput.OldAmount}\"\nwitnesses= [{string.Join(",", publicInput.Witnesses)}]\nleafIndex= \"{publicInput.LeafIndex}\"\nleaf= \"{publicInput.Leaf}\"\nmerkleRoot= \"{publicInput.MerkleRoot}\"\nnullifier= \"{publicInput.Nullifier}\"\namount= \"{publicInput.Amount}\"\nreceiver= \"{publicInput.Receiver}\"\nrelayer= \"{publicInput.Relayer}\"\ndeposit= \"{publicInput.Deposit}\"";
+                string data = $"proof_input=secret= \"{publicInput.Secret}\"\noldAmount= \"{publicInput.OldAmount}\"\nwitnesses= [\"{string.Join("\",\"", publicInput.Witnesses)}\"]\nleafIndex= \"{publicInput.LeafIndex}\"\nleaf= \"{publicInput.Leaf}\"\nmerkleRoot= \"{publicInput.MerkleRoot}\"\nnullifier= \"{publicInput.Nullifier}\"\namount= \"{publicInput.Amount}\"\nreceiver= \"{publicInput.Receiver}\"\nrelayer= \"{publicInput.Relayer}\"\ndeposit= \"{publicInput.Deposit}\"";
 
                 request.Content = new StringContent(data);
                 request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
@@ -75,7 +75,7 @@ namespace SindriServer.Controllers
 
                 _logger.LogInformation("Get result successfull");
 
-                return StatusCode(408, "Proof generation take more time than expected, try generate proof on web browser.";
+                return StatusCode(408, "Proof generation take more time than expected, try generate proof on web browser.");
             }
             catch (Exception ex)
             {
